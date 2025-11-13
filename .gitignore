@@ -1,0 +1,16 @@
+# Cache and runtime files
+*.cache
+*.log
+*.swap
+*.tmp
+*~
+.DS_Store
+
+# Plugin directories
+nvim/plugin/
+emacs/elpa/
+emacs/elpaca/
+
+# Backup files
+*.bak
+*.old
