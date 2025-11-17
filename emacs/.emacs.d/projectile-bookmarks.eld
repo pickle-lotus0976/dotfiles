@@ -1,0 +1,1 @@
+("~/asic_workspace/" "~/dotfiles/")

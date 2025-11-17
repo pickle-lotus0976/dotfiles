@@ -84,11 +84,16 @@
 ;; Parentheses
 (show-paren-mode 1)
 (setq show-paren-delay 0)
+(electric-pair-mode 1)
+;; (setq electric-pair-pairs '( (?\" . ?\") (?\\ { . ?\\ }) (?\\< . ?\\>)))
 
 ;; Auto-revert
 (global-auto-revert-mode 1)
 (setq global-auto-revert-non-file-buffers t
       auto-revert-verbose nil)
+
+;; Cursor Style
+(setq-default cursor-type 'bar)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Font Configuration
