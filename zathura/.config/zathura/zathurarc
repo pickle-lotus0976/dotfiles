@@ -23,12 +23,13 @@ set default-fg                  "#cdd6f4"
 set recolor-lightcolor          "#1e1e2e"
 set recolor-darkcolor           "#cdd6f4"
 set page-padding 1
-set smooth-scroll true
+#set smooth-scroll true
 set scroll-step 100
 set selection-clipboard clipboard
 set incremental-search true
 set adjust-open "best-fit"
 set recolor false
+set font "Inter 12"
 map u scroll half-up
 map d scroll half-down
 map i recolor

@@ -28,7 +28,7 @@ vim.opt.number = true
 vim.opt.tabstop = 4
 vim.opt.shiftwidth = 4
 vim.opt.expandtab = true
-vim.opt.smartindent = true
+vim.opt.autoindent = true
 vim.opt.wrap = false
 vim.opt.hlsearch = true
 vim.opt.incsearch = true
@@ -46,6 +46,8 @@ vim.opt.splitright = true
 vim.opt.undofile = true
 vim.opt.backup = false
 vim.opt.swapfile = false
+vim.opt.lazyredraw = true
+vim.opt.synmaxcol = 240
 
 vim.diagnostic.config({
   virtual_text = { severity = { min = vim.diagnostic.severity.WARN } },
@@ -161,7 +163,7 @@ require('lazy').setup({
     opts = {
       ensure_installed = { 'c', 'cpp', 'python', 'lua', 'bash', 'vim', 'vimdoc', 'markdown', 'markdown_inline', 'verilog' },
       auto_install = true,
-      highlight = { enable = true },
+      highlight = { enable = true, additional_vim_regex_highlighting = false },
       indent = { enable = true },
       incremental_selection = {
         enable = true,
