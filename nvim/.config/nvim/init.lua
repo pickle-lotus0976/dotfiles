@@ -161,7 +161,7 @@ require('lazy').setup({
     build = ':TSUpdate',
     event = { 'BufReadPost', 'BufNewFile' },
     opts = {
-      ensure_installed = { 'c', 'cpp', 'python', 'lua', 'bash', 'vim', 'vimdoc', 'markdown', 'markdown_inline', 'verilog' },
+      ensure_installed = { 'c', 'cpp', 'python', 'lua', 'bash', 'vim', 'vimdoc', 'markdown', 'markdown_inline' },
       auto_install = true,
       highlight = { enable = true, additional_vim_regex_highlighting = false },
       indent = { enable = true },
@@ -269,16 +269,6 @@ require('lazy').setup({
             },
           },
         },
-      })
-
-      -- Verilog/SystemVerilog - verible
-      lspconfig.verible.setup({
-        capabilities = capabilities,
-        cmd = { 'verible-verilog-ls', '--rules_config_search' },
-        filetypes = { 'verilog', 'systemverilog' },
-        root_dir = function(fname)
-          return lspconfig.util.find_git_ancestor(fname) or vim.fn.getcwd()
-        end,
       })
     end
   },
@@ -404,12 +394,6 @@ require('lazy').setup({
   {
     'bfrg/vim-cpp-modern',
     ft = { 'c', 'cpp' },
-  },
-
-  -- Verilog/SystemVerilog syntax
-  {
-    'vhda/verilog_systemverilog.vim',
-    ft = { 'verilog', 'systemverilog' },
   },
 
   -- Terminal
@@ -654,16 +638,5 @@ vim.api.nvim_create_autocmd('FileType', {
   pattern = { 'c', 'cpp' },
   callback = function()
     vim.bo.commentstring = '// %s'
-  end,
-})
-
--- Verilog/SystemVerilog file detection
-vim.api.nvim_create_autocmd({ 'BufRead', 'BufNewFile' }, {
-  group = vim.api.nvim_create_augroup('verilog-filetype', { clear = true }),
-  pattern = { '*.v', '*.vh', '*.sv', '*.svh' },
-  callback = function()
-    vim.bo.filetype = 'verilog'
-    vim.bo.commentstring = '// %s'
-    vim.bo.smartindent = false
   end,
 })
