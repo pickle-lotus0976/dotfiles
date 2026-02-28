@@ -128,3 +128,6 @@ export XDG_CACHE_HOME="$HOME/.cache"
 export XDG_DATA_HOME="$HOME/.local/share"
 export XDG_STATE_HOME="$HOME/.local/state"
 export PDK_ROOT=/home/noah/.volare/volare/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af
+
+# uv
+export PATH="/home/noah/.local/share/../bin:$PATH"
