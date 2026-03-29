@@ -31,6 +31,7 @@
 
 (require 'package)
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+(add-to-list 'package-archives '("nongnu" . "https://elpa.nongnu.org/nongnu/") t)
 (package-initialize)
 
 (unless package-archive-contents
@@ -502,7 +503,8 @@
 ;; Org Babel for code execution
 (org-babel-do-load-languages
  'org-babel-load-languages
- '((emacs-lisp . t)))
+ '((emacs-lisp . t)
+   (latex . t)))
 
 (setq org-confirm-babel-evaluate nil)
 
@@ -514,6 +516,7 @@
 
 (use-package cdlatex
   :ensure t
+  :pin nongnu
   :hook ((org-mode . turn-on-org-cdlatex)))
 
 (with-eval-after-load 'ox-latex
@@ -629,7 +632,7 @@
  ;; If there is more than one, they won't work right.
  '(org-agenda-files nil)
  '(package-selected-packages
-   '(org-bullets elisp-refs macrostep dap-mode diff-hl transient magit which-key projectile realgud multi-term vterm all-the-icons-dired neotree lsp-ui lsp-mode flycheck company doom-modeline catppuccin-theme all-the-icons dashboard)))
+   '(cdlatex org-bullets elisp-refs macrostep diff-hl transient magit which-key projectile all-the-icons-dired neotree lsp-ui lsp-mode flycheck company doom-modeline catppuccin-theme all-the-icons dashboard)))
 
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
