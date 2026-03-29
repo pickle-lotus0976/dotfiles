@@ -437,7 +437,6 @@
 
   ;; Preview LaTeX fragments inline in the buffer
   (setq org-preview-latex-default-process 'dvisvgm  ;; sharper than dvipng
-        org-startup-with-latex-preview t             ;; auto-preview on file open
         org-format-latex-options
         '(:foreground default :background default
           :scale 1.5 :html-foreground "Black"
