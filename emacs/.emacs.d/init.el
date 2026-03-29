@@ -435,14 +435,21 @@
   :config
   ;; Agenda files
   (setq org-agenda-files '("~/org"))
+  (require 'org-tempo)
 
-  ;; Preview LaTeX fragments inline in the buffer
-  (setq org-preview-latex-default-process 'dvisvgm  ;; sharper than dvipng
-        org-format-latex-options
-        '(:foreground default :background default
-          :scale 1.5 :html-foreground "Black"
-          :html-background "Automatic" :html-scale 1.0
-          :matchers ("begin" "$1" "$" "$$" "\\(" "\\[")))
+  ;; Org Babel for code execution
+  (org-babel-do-load-languages
+   'org-babel-load-languages
+   '((emacs-lisp . t)
+     (C . t)
+     (python . t)))
+  (setq org-babel-python-command "python3")
+  (setq org-confirm-babel-evaluate nil)
+
+  ;; Indentation code inside blocks
+  (setq org-src-tab-acts-natively t
+      org-src-preserve-indentation t
+      org-edit-src-content-indentation 0)
 
   ;; Logging
   (setq org-log-done 'time
@@ -451,7 +458,6 @@
   ;; Display
   (setq org-return-follows-link t
         org-hide-emphasis-markers t
-        org-startup-indented t
         org-startup-folded 'content)
 
   ;; TODO keywords
@@ -500,50 +506,11 @@
    `(org-level-1 ((t (,@headline ,@variable-tuple :height 1.5))))
    `(org-document-title ((t (,@headline ,@variable-tuple :height 1.6 :underline nil))))))
 
-;; Org Babel for code execution
-(org-babel-do-load-languages
- 'org-babel-load-languages
- '((emacs-lisp . t)
-   (latex . t)))
-
-(setq org-confirm-babel-evaluate nil)
-
 ;; Org bullets for better visuals
 (use-package org-bullets
   :hook (org-mode . org-bullets-mode)
   :config
   (setq org-bullets-bullet-list '("◉" "○" "●" "○" "●" "○" "●")))
-
-(use-package cdlatex
-  :ensure t
-  :pin nongnu
-  :hook ((org-mode . turn-on-org-cdlatex)))
-
-(with-eval-after-load 'ox-latex
-  (setq org-latex-compiler "pdflatex")
-  (setq org-latex-pdf-process
-        '("pdflatex -interaction nonstopmode -output-directory %o %f"
-          "bibtex %b"                              ;; remove if not using citations
-          "pdflatex -interaction nonstopmode -output-directory %o %f"
-          "pdflatex -interaction nonstopmode -output-directory %o %f"))
-
-  ;; Add amsart for research papers (better than plain article)
-  (add-to-list 'org-latex-classes
-               '("amsart"
-                 "\\documentclass{amsart}
-[DEFAULT-PACKAGES]
-[PACKAGES]
-[EXTRA]"
-                 ("\\section{%s}" . "\\section*{%s}")
-                 ("\\subsection{%s}" . "\\subsection*{%s}")
-                 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")))
-
-  ;; Useful math packages always available on export
-  (setq org-latex-packages-alist
-        '(("" "amsmath" t)
-          ("" "amssymb" t)
-          ("" "amsthm"  t)
-          ("" "mathtools" t))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; File Backup & Cleanup
@@ -632,7 +599,7 @@
  ;; If there is more than one, they won't work right.
  '(org-agenda-files nil)
  '(package-selected-packages
-   '(cdlatex org-bullets elisp-refs macrostep diff-hl transient magit which-key projectile all-the-icons-dired neotree lsp-ui lsp-mode flycheck company doom-modeline catppuccin-theme all-the-icons dashboard)))
+   '(org-bullets elisp-refs macrostep diff-hl transient magit which-key projectile all-the-icons-dired neotree lsp-ui lsp-mode flycheck company doom-modeline catppuccin-theme all-the-icons dashboard)))
 
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
