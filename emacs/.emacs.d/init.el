@@ -159,7 +159,7 @@
   (doom-modeline-mode 1))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Auto-completion (Company)
+;;; Auto-completion
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (use-package company
@@ -195,7 +195,7 @@
 
 (use-package lsp-mode
   :commands (lsp lsp-deferred)
-  :hook ((c-mode c++-mode python-mode verilog-mode) . lsp-deferred)
+  :hook (verilog-mode . lsp-deferred)
   :init
   (setq lsp-keymap-prefix "C-c l")
   :config
@@ -212,15 +212,7 @@
         lsp-signature-auto-activate t
         lsp-signature-render-documentation t)
 
-  ;; Clangd for C/C++
-  (setq lsp-clients-clangd-args
-        '("--header-insertion=never"
-          "--clang-tidy"
-          "--completion-style=detailed"
-          "--background-index"
-          "--pch-storage=memory"))
-
-  ;; Verible for Verilog/SystemVerilog
+  ;; Verible for Verilog
   (lsp-register-client
    (make-lsp-client
     :new-connection (lsp-stdio-connection "verible-verilog-ls")
@@ -247,7 +239,7 @@
         lsp-ui-doc-delay 0.5))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Verilog/SystemVerilog Configuration
+;;; Verilog
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (use-package verilog-mode
@@ -324,24 +316,6 @@
   (add-to-list 'flycheck-checkers 'verilog-verilator))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; C/C++ Configuration
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(setq c-default-style "linux"
-      c-basic-offset 4)
-
-(add-hook 'c++-mode-hook
-          (lambda ()
-            (setq flycheck-gcc-language-standard "c++17"
-                  flycheck-clang-language-standard "c++17"
-                  c-basic-offset 4)))
-
-(add-hook 'c-mode-hook
-          (lambda ()
-            (setq flycheck-gcc-language-standard "c11"
-                  flycheck-clang-language-standard "c11")))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Emacs Lisp Configuration
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -389,49 +363,6 @@
 
 (use-package all-the-icons-dired
   :hook (dired-mode . all-the-icons-dired-mode))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Terminal Emulator
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(use-package vterm
-  :bind ("C-c t" . vterm)
-  :config
-  (setq vterm-max-scrollback 10000
-        vterm-shell "/bin/bash"
-        vterm-term-environment-variable "xterm-256color"))
-
-(use-package multi-term
-  :bind ("C-c T" . multi-term)
-  :config
-  (setq multi-term-program "/bin/bash"))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Debugger - Enhanced
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; GDB configuration
-(setq gdb-many-windows t
-      gdb-show-main t
-      gdb-use-separate-io-buffer t)
-
-(use-package realgud
-  :commands (realgud:gdb realgud:pdb))
-
-;; DAP Mode for modern debugging
-(use-package dap-mode
-  :after lsp-mode
-  :commands dap-debug
-  :config
-  (dap-auto-configure-mode)
-  (require 'dap-gdb-lldb)
-  (require 'dap-python)
-
-  ;; GDB/LLDB configuration
-  (setq dap-gdb-lldb-path "lldb-vscode")
-
-  ;; Python debugging
-  (setq dap-python-debugger 'debugpy))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Project Management - Projectile
@@ -504,6 +435,15 @@
   ;; Agenda files
   (setq org-agenda-files '("~/org"))
 
+  ;; Preview LaTeX fragments inline in the buffer
+  (setq org-preview-latex-default-process 'dvisvgm  ;; sharper than dvipng
+        org-startup-with-latex-preview t             ;; auto-preview on file open
+        org-format-latex-options
+        '(:foreground default :background default
+          :scale 1.5 :html-foreground "Black"
+          :html-background "Automatic" :html-scale 1.0
+          :matchers ("begin" "$1" "$" "$$" "\\(" "\\[")))
+
   ;; Logging
   (setq org-log-done 'time
         org-log-into-drawer t)
@@ -563,9 +503,7 @@
 ;; Org Babel for code execution
 (org-babel-do-load-languages
  'org-babel-load-languages
- '((emacs-lisp . t)
-   (python . t)
-   (C . t)))
+ '((emacs-lisp . t)))
 
 (setq org-confirm-babel-evaluate nil)
 
@@ -574,6 +512,36 @@
   :hook (org-mode . org-bullets-mode)
   :config
   (setq org-bullets-bullet-list '("◉" "○" "●" "○" "●" "○" "●")))
+
+(use-package cdlatex
+  :ensure t
+  :hook ((org-mode . turn-on-org-cdlatex)))
+
+(with-eval-after-load 'ox-latex
+  (setq org-latex-compiler "pdflatex")
+  (setq org-latex-pdf-process
+        '("pdflatex -interaction nonstopmode -output-directory %o %f"
+          "bibtex %b"                              ;; remove if not using citations
+          "pdflatex -interaction nonstopmode -output-directory %o %f"
+          "pdflatex -interaction nonstopmode -output-directory %o %f"))
+
+  ;; Add amsart for research papers (better than plain article)
+  (add-to-list 'org-latex-classes
+               '("amsart"
+                 "\\documentclass{amsart}
+[DEFAULT-PACKAGES]
+[PACKAGES]
+[EXTRA]"
+                 ("\\section{%s}" . "\\section*{%s}")
+                 ("\\subsection{%s}" . "\\subsection*{%s}")
+                 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")))
+
+  ;; Useful math packages always available on export
+  (setq org-latex-packages-alist
+        '(("" "amsmath" t)
+          ("" "amssymb" t)
+          ("" "amsthm"  t)
+          ("" "mathtools" t))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; File Backup & Cleanup
@@ -618,20 +586,18 @@
   "Check for redundant or unnecessary configuration in init.el."
   (interactive)
   (with-output-to-temp-buffer "*Init Analysis*"
-    (princ "=== Emacs Configuration Analysis ===\n\n")
+    (princ "Emacs Configuration Analysis\n\n")
 
     ;; Check for required executables
-    (princ "--- External Tool Dependencies ---\n")
+    (princ "External Tool Dependencies\n")
     (dolist (tool '(("verilator" "Verilog linting/simulation")
                     ("verible-verilog-ls" "Verilog LSP server")
-                    ("clangd" "C/C++ LSP server")
-                    ("pyright" "Python LSP server")
                     ("gtkwave" "Waveform viewer")))
       (if (executable-find (car tool))
-          (princ (format "  ✓ %s: Found\n" (car tool)))
-        (princ (format "  ✗ %s: NOT FOUND - %s\n" (car tool) (cadr tool)))))
+          (princ (format "%s: Found\n" (car tool)))
+        (princ (format "%s: NOT FOUND%s\n" (car tool) (cadr tool)))))
 
-    (princ "\n--- Performance Statistics ---\n")
+    (princ "\nPerformance Statistics\n")
     (when (fboundp 'use-package-report)
       (princ "  Run M-x use-package-report for loading times\n"))
 
@@ -639,19 +605,19 @@
     (princ (format "  Read process max: %s bytes\n" read-process-output-max))
 
     ;; Check font availability
-    (princ "\n--- Font Configuration ---\n")
+    (princ "\nFont Configuration\n")
     (if (member "JetBrainsMono Nerd Font" (font-family-list))
-        (princ "  ✓ JetBrainsMono Nerd Font: Found\n")
-      (princ "  ✗ JetBrainsMono Nerd Font: NOT FOUND\n"))
+        (princ "JetBrainsMono Nerd Font: Found\n")
+      (princ "JetBrainsMono Nerd Font: NOT FOUND\n"))
 
-    (princ "\n--- Removed Configurations ---\n")
-    (princ "  • mu4e (email client) - Removed\n")
-    (princ "  • w3m (HTML rendering for email) - Removed\n")
-    (princ "  • org-mime (org-mode email integration) - Removed\n")
-    (princ "  • platformio-mode (embedded development) - Removed\n")
-    (princ "  • company-arduino (Arduino completions) - Removed\n")
+    (princ "\nRemoved Configurations\n")
+    (princ "mu4e (email client) - Removed\n")
+    (princ "w3m (HTML rendering for email) - Removed\n")
+    (princ "org-mime (org-mode email integration) - Removed\n")
+    (princ "platformio-mode (embedded development) - Removed\n")
+    (princ "company-arduino (Arduino completions) - Removed\n")
 
-    (princ "\n=== Analysis Complete ===\n")))
+    (princ "\nAnalysis Complete\n")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; End of Configuration

@@ -131,3 +131,8 @@ export PDK_ROOT=/home/noah/.volare/volare/sky130/versions/0fe599b2afb6708d281543
 
 # uv
 export PATH="/home/noah/.local/share/../bin:$PATH"
+export PATH="/opt/espresso/7.5:$PATH"
+export OMP_NUM_THREADS=1
+export PATH=$PATH:$HOME/vIDEs
+export ESPRESSO_PSEUDO="$HOME/pseudopotentials/SSSP_efficiency"
+export PATH=$PATH:$HOME/wannier90-3.1.0
