@@ -116,11 +116,18 @@ if ! shopt -oq posix; then
   fi
 fi
 
+NPM_PACKAGES="${HOME}/.npm-global"
 
+export PATH="$PATH:$NPM_PACKAGES/bin"
+
+# Preserve MANPATH if you already defined it somewhere in your config.
+# Otherwise, fall back to `manpath` so we can inherit from `/etc/manpath`.
+export MANPATH="${MANPATH-$(manpath)}:$NPM_PACKAGES/share/man"
+
+# starship prompt
 eval "$(starship init bash)"
 
 export GPG_TTY=$(tty)
-export PATH="/opt/nvim-linux-x86_64/bin:$PATH"
 
 # Set in ~/.bash_profile or ~/.profile
 export XDG_CONFIG_HOME="$HOME/.config"
@@ -133,8 +140,7 @@ export PDK_ROOT=/home/noah/.volare/volare/sky130/versions/0fe599b2afb6708d281543
 export PATH="/home/noah/.local/share/../bin:$PATH"
 export PATH="/opt/espresso/7.5:$PATH"
 export OMP_NUM_THREADS=1
-export PATH=$PATH:$HOME/vIDEs
 export ESPRESSO_PSEUDO="$HOME/pseudopotentials/SSSP_efficiency"
 export PATH=$PATH:$HOME/wannier90-3.1.0
 export TERM=xterm-256color
-export PATH="$HOME/.cargo/bin:$PATH"
+
