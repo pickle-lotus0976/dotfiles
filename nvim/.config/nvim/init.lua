@@ -1,9 +1,7 @@
 -- Suppress lspconfig deprecation warnings
 vim.deprecate = function() end
 
--- =============================================================================
 -- LAZY.NVIM BOOTSTRAP
--- =============================================================================
 local lazypath = vim.fn.stdpath('data') .. '/lazy/lazy.nvim'
 if not vim.loop.fs_stat(lazypath) then
   vim.fn.system({
@@ -14,9 +12,7 @@ if not vim.loop.fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
--- =============================================================================
 -- CORE OPTIONS
--- =============================================================================
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 vim.g.loaded_perl_provider = 0
@@ -102,9 +98,6 @@ map('n', '<leader>dl', vim.diagnostic.setloclist, { desc = 'Diagnostic loclist' 
 -- Better paste
 map('x', '<leader>p', '"_dP', { desc = 'Paste without yanking' })
 
--- =============================================================================
--- PLUGINS
--- =============================================================================
 require('lazy').setup({
   -- Colorscheme
   {
@@ -161,7 +154,7 @@ require('lazy').setup({
     build = ':TSUpdate',
     event = { 'BufReadPost', 'BufNewFile' },
     opts = {
-      ensure_installed = { 'c', 'cpp', 'python', 'lua', 'bash', 'vim', 'vimdoc', 'markdown', 'markdown_inline' },
+      ensure_installed = { 'c', 'cpp', 'python', 'lua', 'bash', 'vim', 'vimdoc', 'markdown', 'markdown_inline'},
       auto_install = true,
       highlight = { enable = true, additional_vim_regex_highlighting = false },
       indent = { enable = true },
@@ -180,7 +173,7 @@ require('lazy').setup({
     end
   },
 
-  -- Mason - Package manager for LSP/DAP/Linters/Formatters
+  -- Mason
   {
     'williamboman/mason.nvim',
     cmd = 'Mason',
@@ -199,17 +192,17 @@ require('lazy').setup({
     end
   },
 
-  -- Mason-LSPconfig bridge
+  -- Mason-LSP
   {
     'williamboman/mason-lspconfig.nvim',
     dependencies = { 'williamboman/mason.nvim' },
     config = function()
       require('mason-lspconfig').setup({
         ensure_installed = {
-          'clangd',    -- C/C++
-          'pyright',   -- Python
+          'clangd', -- C/C++
+          'pyright' -- Python
         },
-        automatic_installation = true,
+        automatic_installation = false,
       })
     end
   },
@@ -613,9 +606,6 @@ require('lazy').setup({
   },
 })
 
--- =============================================================================
--- AUTOCOMMANDS
--- =============================================================================
 
 -- Highlight yanked text
 vim.api.nvim_create_autocmd('TextYankPost', {
