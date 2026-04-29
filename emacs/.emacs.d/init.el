@@ -105,52 +105,55 @@
 ;;; Icons
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(use-package all-the-icons
-  :if (display-graphic-p)
-  :demand t)
+(use-package nerd-icons
+  :ensure t
+  :init
+  (setq nerd-icons-scale-factor 1.2))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Dashboard - Welcome Screen
+;;; Dashboard
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (use-package dashboard
   :demand t
-  :after all-the-icons
+  :after nerd-icons
   :config
   (setq dashboard-banner-logo-title "Welcome to Emacs!"
         dashboard-startup-banner 'logo
         dashboard-center-content t
         dashboard-vertically-center-content t
         dashboard-display-icons-p t
-        dashboard-icon-type 'all-the-icons
+        dashboard-icon-type 'nerd-icons
         dashboard-set-heading-icons t
         dashboard-set-file-icons t
-        dashboard-items '((recents . 8) (agenda . 5))
-        dashboard-path-max-length 50
-        dashboard-items-default-length 20
-        dashboard-set-init-info t)
+        dashboard-path-max-length 30
+        dashboard-items-default-length 20)
   (dashboard-setup-startup-hook))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Theme Configuration
+;;; Doom-Themes and Doom-Modeline Configuration
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(use-package catppuccin-theme
+(use-package doom-themes
   :demand t
+  :init
+  (setq doom-themes-enable-bold t
+        doom-themes-enable-italic t)
   :config
-  (setq catppuccin-flavor 'mocha)
-  (load-theme 'catppuccin :no-confirm))
+  (load-theme 'doom-one :no-confirm)
+  (doom-themes-visual-bell-config)
+  (doom-themes-org-config))
 
 (use-package doom-modeline
   :demand t
+  :hook (after-init . doom-modeline-mode)
   :config
   (setq doom-modeline-height 25
-        doom-modeline-bar-width 3
+        doom-modeline-bar-width 4
         doom-modeline-icon t
         doom-modeline-major-mode-icon t
         doom-modeline-major-mode-color-icon t
-        doom-modeline-buffer-file-name-style 'truncate-upto-project)
-  (doom-modeline-mode 1))
+        doom-modeline-buffer-file-name-style 'truncate-upto-project))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Syntax Checking using Flycheck
@@ -164,162 +167,80 @@
         flycheck-display-errors-delay 0.3))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; LSP (only for Verilog)
+;;; File Explorer & Dired
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(use-package lsp-mode
-  :commands (lsp lsp-deferred)
-  :hook ((verilog-mode . lsp-deferred))
+;; dired-subtree — expand subdirectories inline with TAB / S-TAB
+(use-package dired-subtree
+  :after dired
+  :bind (:map dired-mode-map
+         ("<tab>"     . dired-subtree-toggle)
+         ("<backtab>" . dired-subtree-cycle))
+  :config
+  (setq dired-subtree-use-backgrounds nil)) ; cleaner look in a narrow sidebar
+
+(use-package dired-toggle
+  :defer t
+  :bind (("<f3>" . #'dired-toggle)
+         :map dired-mode-map
+         ("q" . #'dired-toggle-quit)
+         ([remap dired-find-file] . #'dired-toggle-find-file)
+         ([remap dired-up-directory] . #'dired-toggle-up-directory)
+         ("C-c C-u" . #'dired-toggle-up-directory))
+  :config
+  (setq dired-toggle-window-size 32)
+  (setq dired-toggle-window-side 'left)
+
+  ;; Optional, enable =visual-line-mode= for our narrow dired buffer:
+  (add-hook 'dired-toggle-mode-hook
+            (lambda () (interactive)
+              (visual-line-mode 1)
+              (setq-local visual-line-fringe-indicators '(nil right-curly-arrow))
+              (setq-local word-wrap nil))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Project Management
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(use-package project
+  :ensure nil
+  :bind-keymap ("C-c P" . project-prefix-map))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Centaur Tabs
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(use-package centaur-tabs
+  :demand t
   :init
-  (setq lsp-keymap-prefix "C-c L")
+  (setq centaur-tabs-style             "bar"
+        centaur-tabs-height            30
+        centaur-tabs-set-icons         t
+        centaur-tabs-icon-type         'nerd-icons
+        centaur-tabs-set-bar           'over
+        centaur-tabs-set-modified-marker t
+        centaur-tabs-modified-marker   "●"
+        centaur-tabs-cycle-scope       'tabs)
   :config
-  (setq lsp-idle-delay 0.5
-        lsp-log-io nil
-        lsp-file-watch-threshold 2000
-        lsp-enable-symbol-highlighting t
-        lsp-enable-on-type-formatting nil
-        lsp-headerline-breadcrumb-enable t
-        lsp-modeline-diagnostics-enable t
-        lsp-auto-guess-root t
-        lsp-auto-configure t
-        lsp-lens-enable t
-        lsp-signature-auto-activate t
-        lsp-signature-render-documentation t)
-
-  ;; Verible for Verilog
-  (lsp-register-client
-   (make-lsp-client
-    :new-connection (lsp-stdio-connection "verible-verilog-ls")
-    :major-modes '(verilog-mode)
-    :server-id 'verible-ls
-    :priority 1)))
-
-(use-package lsp-ui
-  :after lsp-mode
-  :commands lsp-ui-mode
-  :hook (lsp-mode . lsp-ui-mode)
-  :bind (:map lsp-ui-mode-map
-              ("C-c L d" . lsp-ui-doc-show)
-              ("C-c L p" . lsp-ui-peek-find-definitions)
-              ("C-c L r" . lsp-ui-peek-find-references)
-              ("C-c L i" . lsp-ui-imenu))
-  :config
-  (setq lsp-ui-sideline-enable t
-        lsp-ui-sideline-show-hover nil
-        lsp-ui-sideline-show-code-actions t
-        lsp-ui-peek-enable t
-        lsp-ui-doc-enable t
-        lsp-ui-doc-position 'at-point
-        lsp-ui-doc-delay 0.5))
+  (centaur-tabs-mode 1)
+  (centaur-tabs-group-by-projectile-project)
+  (defun my/centaur-tabs-hide-buffer-p (buffer)
+    (with-current-buffer buffer
+      (or (string-prefix-p "*" (buffer-name))
+          (derived-mode-p 'dired-mode))))
+  (setq centaur-tabs-hide-tab-function #'my/centaur-tabs-hide-buffer-p)
+  :bind
+  (("C-<prior>" . centaur-tabs-backward)
+   ("C-<next>"  . centaur-tabs-forward)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Verilog mode configuration
+;;; Which-Key
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(use-package verilog-mode
-  :ensure nil
-  :mode (("\\.v\\'" . verilog-mode)
-         ("\\.vh\\'" . verilog-mode)
-         ("\\.sv\\'" . verilog-mode)
-         ("\\.svh\\'" . verilog-mode))
-  :bind (:map verilog-mode-map
-              ("C-c C-a" . verilog-auto)
-              ("C-c C-s" . verilog-sk-begin)
-              ("C-c C-m" . verilog-sk-module)
-              ("C-c v l" . verilog-verilator-lint)
-              ("C-c v c" . verilog-verilator-compile)
-              ("C-c v r" . verilog-verilator-run)
-              ("C-c v w" . verilog-verilator-view-waveform))
+(use-package which-key
+  :demand t
   :config
-  ;; Indentation settings
-  (setq verilog-indent-level 3
-        verilog-indent-level-module 3
-        verilog-indent-level-declaration 3
-        verilog-indent-level-behavioral 3
-        verilog-case-indent 2
-        verilog-auto-newline nil
-        verilog-auto-indent-on-newline t
-        verilog-auto-endcomments t
-        verilog-tab-always-indent t
-        verilog-highlight-p1800-keywords t
-        verilog-linter "verilator --lint-only -Wall")
-
-  ;; Auto-save AUTOs
-  (add-hook 'verilog-mode-hook
-            (lambda ()
-              (add-hook 'before-save-hook 'verilog-auto nil t)))
-
-  ;; Verilator integration functions
-  (defun verilog-verilator-lint ()
-    "Lint current Verilog file with Verilator."
-    (interactive)
-    (compile (format "verilator --lint-only -Wall %s" (buffer-file-name))))
-
-(defun verilog-verilator-compile ()
-  "Compile current Verilog module with Verilator."
-  (interactive)
-  (let ((module-name (read-string "Top module name: ")))
-    (compile (format "verilator --cc --exe --build -j 0 -Wall --top-module %s %s sim_main.cpp"
-                     module-name (buffer-file-name)))))
-
-  (defun verilog-verilator-run ()
-    "Run Verilator simulation."
-    (interactive)
-    (let ((default-directory (locate-dominating-file default-directory "obj_dir")))
-      (if default-directory
-          (compile "obj_dir/Vtop")
-        (message "No obj_dir found. Compile first with C-c v c"))))
-
-(defun verilog-verilator-view-waveform ()
-    "View VCD waveform with GTKWave."
-    (interactive)
-    (let ((vcd-file (read-file-name "VCD file: " nil nil t nil
-                                (lambda (f)
-                                  (or (file-directory-p f)
-                                      (string-suffix-p ".vcd" f))))))
-      (when (and vcd-file (file-exists-p vcd-file))
-        (start-process "gtkwave" nil "gtkwave" vcd-file))))
-
-;; Flycheck integration for Verilator
-(with-eval-after-load 'flycheck
-  (flycheck-define-checker verilog-verilator
-    "A Verilog syntax checker using Verilator."
-    :command ("verilator" "--lint-only" "-Wall" source)
-    :error-patterns
-    ((warning line-start "%Warning" (? "-" (id (+ (any alpha)))) ": "
-              (file-name) ":" line ":" column ": " (message) line-end)
-     (error line-start "%Error" (? "-" (id (+ (any alpha)))) ": "
-            (file-name) ":" line ":" column ": " (message) line-end))
-    :modes verilog-mode)
-  (add-to-list 'flycheck-checkers 'verilog-verilator))
-)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; C / C++ Configuration
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(use-package cc-mode
-  :ensure nil
-  :hook ((c-mode   . (lambda () (c-set-style "bsd")))
-         (c++-mode . (lambda () (c-set-style "bsd"))))
-  :config
-  (setq c-basic-offset 4
-        c-tab-always-indent t))
-
-;; clang-format: auto-format C/C++ on save or manually
-(use-package clang-format
-  :bind (:map c-mode-base-map
-              ("C-c f"   . clang-format-buffer)
-              ("C-c C-f" . clang-format-region))
-  :config
-  ;; Use a .clang-format file in your project root if present, otherwise Google style
-  (setq clang-format-style "file"
-        clang-format-fallback-style "Google"))
-
-;; CMake support for CMakeLists.txt and .cmake files
-(use-package cmake-mode
-  :mode (("CMakeLists\\.txt\\'" . cmake-mode)
-         ("\\.cmake\\'" . cmake-mode)))
+  (which-key-mode)
+  (setq which-key-idle-delay 0.5))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Eglot and Corfu configuration
@@ -329,11 +250,15 @@
   :ensure nil
   :hook ((c-mode      . eglot-ensure)
          (c++-mode    . eglot-ensure)
-         (python-mode . eglot-ensure))
+         (python-mode . eglot-ensure)
+         (verilog-mode . eglot-ensure))
   :custom
   (eglot-autoshutdown t)
   (eglot-sync-connect 1)
-  (eglot-ignored-server-capabilities '(:documentHighlightProvider)))
+  (eglot-ignored-server-capabilities '(:documentHighlightProvider))
+  :config
+  (add-to-list 'eglot-server-programs
+               '((verilog-mode) . ("verible-verilog-ls"))))
 
 (use-package corfu
   :ensure t
@@ -383,13 +308,33 @@
 (with-eval-after-load 'eglot
   (add-hook 'eglot-managed-mode-hook #'my/eglot-capf-setup))
 
-(use-package gud
-  :ensure nil
-  :bind (("<f5>"    . gdb)
-         ("<f9>"    . gud-break)
-         ("<f10>"   . gud-next)
-         ("<f11>"   . gud-step)
-         ("<S-f11>" . gud-finish)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Magit - Git Interface
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(use-package transient
+  :demand t)
+
+(use-package magit
+  :after transient
+  :bind (("C-x g" . magit-status)
+         ("C-x M-g" . magit-dispatch)
+         ("C-c g" . magit-file-dispatch)
+         ("C-c M-g" . magit-blame-addition))
+  :config
+  (setq magit-diff-refine-hunk 'all
+        magit-refresh-status-buffer t
+        magit-commit-show-diff t
+        magit-display-buffer-function #'magit-display-buffer-same-window-except-diff-v1))
+
+(use-package diff-hl
+  :demand t
+  :hook ((magit-pre-refresh . diff-hl-magit-pre-refresh)
+         (magit-post-refresh . diff-hl-magit-post-refresh))
+  :config
+  (global-diff-hl-mode)
+  (diff-hl-flydiff-mode)
+  (diff-hl-margin-mode))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Emacs Lisp Configuration
@@ -418,81 +363,76 @@
               ("C-c e" . macrostep-expand)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; File Explorer & Dired
+;;; Verilog / SystemVerilog
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; dired-subtree — expand subdirectories inline with TAB / S-TAB
-(use-package dired-subtree
-  :after dired
-  :bind (:map dired-mode-map
-         ("<tab>"     . dired-subtree-toggle)
-         ("<backtab>" . dired-subtree-cycle))
+(use-package verilog-ext
+  :ensure t
+  :demand t
+  :hook (verilog-mode . verilog-ext-mode)
+  :init
+  (setq verilog-ext-feature-list
+        '(font-lock
+          eglot
+          flycheck
+          navigation
+          template
+          compilation
+          imenu
+          ports
+          which-func
+          beautify))
   :config
-  (setq dired-subtree-use-backgrounds nil)) ; cleaner look in a narrow sidebar
+  (verilog-ext-mode-setup)
+  (setq verilog-ext-flycheck-default-linter 'verilog-ext-verible)
 
-(use-package dired-toggle
-  :defer t
-  :bind (("<f3>" . #'dired-toggle)
-         :map dired-mode-map
-         ("q" . #'dired-toggle-quit)
-         ([remap dired-find-file] . #'dired-toggle-find-file)
-         ([remap dired-up-directory] . #'dired-toggle-up-directory)
-         ("C-c C-u" . #'dired-toggle-up-directory))
-  :config
-  (setq dired-toggle-window-size 32)
-  (setq dired-toggle-window-side 'left)
-
-  ;; Optional, enable =visual-line-mode= for our narrow dired buffer:
-  (add-hook 'dired-toggle-mode-hook
-            (lambda () (interactive)
-              (visual-line-mode 1)
-              (setq-local visual-line-fringe-indicators '(nil right-curly-arrow))
-              (setq-local word-wrap nil))))
+  (setq verilog-indent-level             3
+        verilog-indent-level-module      3
+        verilog-indent-level-declaration 3
+        verilog-indent-level-behavioral  3
+        verilog-case-indent              2
+        verilog-auto-newline             nil
+        verilog-auto-indent-on-newline   t
+        verilog-auto-endcomments         t
+        verilog-tab-always-indent        t
+        verilog-highlight-p1800-keywords t)
+  )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Project Management
+;;; C / C++ Configuration
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(use-package project
+
+(use-package cc-mode
   :ensure nil
-  :bind-keymap ("C-c P" . project-prefix-map))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Which-Key
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(use-package which-key
-  :demand t
+  :hook ((c-mode   . (lambda () (c-set-style "bsd")))
+         (c++-mode . (lambda () (c-set-style "bsd"))))
   :config
-  (which-key-mode)
-  (setq which-key-idle-delay 0.5))
+  (setq c-basic-offset 4
+        c-tab-always-indent t))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Magit - Git Interface
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(use-package transient
-  :demand t)
-
-(use-package magit
-  :after transient
-  :bind (("C-x g" . magit-status)
-         ("C-x M-g" . magit-dispatch)
-         ("C-c g" . magit-file-dispatch)
-         ("C-c M-g" . magit-blame-addition))
+;; clang-format: auto-format C/C++ on save or manually
+(use-package clang-format
+  :bind (:map c-mode-base-map
+              ("C-c f"   . clang-format-buffer)
+              ("C-c C-f" . clang-format-region))
   :config
-  (setq magit-diff-refine-hunk 'all
-        magit-refresh-status-buffer t
-        magit-commit-show-diff t
-        magit-display-buffer-function #'magit-display-buffer-same-window-except-diff-v1))
+  ;; Use a .clang-format file in your project root if present, otherwise Google style
+  (setq clang-format-style "file"
+        clang-format-fallback-style "Google"))
 
-(use-package diff-hl
-  :demand t
-  :hook ((magit-pre-refresh . diff-hl-magit-pre-refresh)
-         (magit-post-refresh . diff-hl-magit-post-refresh))
-  :config
-  (global-diff-hl-mode)
-  (diff-hl-flydiff-mode)
-  (diff-hl-margin-mode))
+;; CMake support for CMakeLists.txt and .cmake files
+(use-package cmake-mode
+  :mode (("CMakeLists\\.txt\\'" . cmake-mode)
+         ("\\.cmake\\'" . cmake-mode)))
+
+;; Grand Unified Debugger
+(use-package gud
+  :ensure nil
+  :bind (("<f5>"    . gdb)
+         ("<f9>"    . gud-break)
+         ("<f10>"   . gud-next)
+         ("<f11>"   . gud-step)
+         ("<S-f11>" . gud-finish)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Org Mode Configuration
@@ -680,18 +620,18 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(org-bullets elisp-refs macrostep diff-hl transient magit which-key corfu cape dired-toggle dired-subtree lsp-ui lsp-mode flycheck yasnippet yasnippet-snippets yasnippet-capf clang-format cmake-mode doom-modeline catppuccin-theme all-the-icons dashboard)))
+   '(org-bullets elisp-refs macrostep diff-hl transient magit which-key corfu verilog-ext cape dired-toggle dired-subtree flycheck yasnippet yasnippet-snippets yasnippet-capf clang-format cmake-mode doom-modeline doom-themes nerd-icons dashboard gud)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(org-document-title ((t (:inherit default :weight bold :foreground "#cdd6f4" :font "JetBrainsMono Nerd Font" :height 1.6 :underline nil))))
- '(org-level-1 ((t (:inherit default :weight bold :foreground "#cdd6f4" :font "JetBrainsMono Nerd Font" :height 1.5))))
- '(org-level-2 ((t (:inherit default :weight bold :foreground "#cdd6f4" :font "JetBrainsMono Nerd Font" :height 1.3))))
- '(org-level-3 ((t (:inherit default :weight bold :foreground "#cdd6f4" :font "JetBrainsMono Nerd Font" :height 1.2))))
- '(org-level-4 ((t (:inherit default :weight bold :foreground "#cdd6f4" :font "JetBrainsMono Nerd Font" :height 1.1))))
- '(org-level-5 ((t (:inherit default :weight bold :foreground "#cdd6f4" :font "JetBrainsMono Nerd Font"))))
- '(org-level-6 ((t (:inherit default :weight bold :foreground "#cdd6f4" :font "JetBrainsMono Nerd Font"))))
- '(org-level-7 ((t (:inherit default :weight bold :foreground "#cdd6f4" :font "JetBrainsMono Nerd Font"))))
- '(org-level-8 ((t (:inherit default :weight bold :foreground "#cdd6f4" :font "JetBrainsMono Nerd Font")))))
+ '(org-document-title ((t (:inherit default :weight bold :foreground "#bbc2cf" :font "JetBrainsMono Nerd Font" :height 1.6 :underline nil))))
+ '(org-level-1 ((t (:inherit default :weight bold :foreground "#bbc2cf" :font "JetBrainsMono Nerd Font" :height 1.5))))
+ '(org-level-2 ((t (:inherit default :weight bold :foreground "#bbc2cf" :font "JetBrainsMono Nerd Font" :height 1.3))))
+ '(org-level-3 ((t (:inherit default :weight bold :foreground "#bbc2cf" :font "JetBrainsMono Nerd Font" :height 1.2))))
+ '(org-level-4 ((t (:inherit default :weight bold :foreground "#bbc2cf" :font "JetBrainsMono Nerd Font" :height 1.1))))
+ '(org-level-5 ((t (:inherit default :weight bold :foreground "#bbc2cf" :font "JetBrainsMono Nerd Font"))))
+ '(org-level-6 ((t (:inherit default :weight bold :foreground "#bbc2cf" :font "JetBrainsMono Nerd Font"))))
+ '(org-level-7 ((t (:inherit default :weight bold :foreground "#bbc2cf" :font "JetBrainsMono Nerd Font"))))
+ '(org-level-8 ((t (:inherit default :weight bold :foreground "#bbc2cf" :font "JetBrainsMono Nerd Font")))))
