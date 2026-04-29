@@ -93,13 +93,42 @@
 ;;; Font Configuration
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(when (member "JetBrainsMono Nerd Font" (font-family-list))
+;; (seq-filter (lambda (f) (string-match-p "Caskaydia" f)) (font-family-list))
+
+(when (member "CaskaydiaCove Nerd Font" (font-family-list))
+  ;; Base monospace font
   (set-face-attribute 'default nil
-                      :font "JetBrainsMono Nerd Font"
-                      :height 140)
+                      :font "CaskaydiaCove Nerd Font"
+                      :height 140
+                      :weight 'regular)
+
+  ;; Fixed Pitch
   (set-face-attribute 'fixed-pitch nil
-                      :font "JetBrainsMono Nerd Font"
-                      :height 140))
+                      :font "CaskaydiaCove Nerd Font"
+                      :height 140
+                      :weight 'regular)
+
+  ;; Varible Pitch
+  (set-face-attribute 'variable-pitch nil
+                    :font "CaskaydiaCove Nerd Font"
+                    :height 140
+                    :weight 'regular)
+
+  ;; Bold
+  (set-face-attribute 'bold nil
+                      :font "CaskaydiaCove Nerd Font"
+                      :weight 'bold)
+
+  ;; Italic
+  (set-face-attribute 'italic nil
+                      :font "CaskaydiaCove Nerd Font"
+                      :slant 'italic)
+
+  ;; Bold italic
+  (set-face-attribute 'bold-italic nil
+                      :font "CaskaydiaCove Nerd Font"
+                      :weight 'bold
+                      :slant 'italic))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Icons
@@ -118,8 +147,7 @@
   :demand t
   :after nerd-icons
   :config
-  (setq dashboard-banner-logo-title "Welcome to Emacs!"
-        dashboard-startup-banner 'logo
+  (setq dashboard-startup-banner 'logo
         dashboard-center-content t
         dashboard-vertically-center-content t
         dashboard-display-icons-p t
@@ -156,15 +184,52 @@
         doom-modeline-buffer-file-name-style 'truncate-upto-project))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Eldoc Configuration
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(use-package eldoc
+  :preface
+   (add-to-list 'display-buffer-alist
+               '("^\\*eldoc for" display-buffer-at-bottom
+                 (window-height . 4)))
+   (setq eldoc-documentation-strategy 'eldoc-documentation-compose-eagerly)
+  :config
+   (eldoc-add-command-completions "paredit-")
+   (eldoc-add-command-completions "combobulate-"))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Syntax Checking using Flycheck
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (use-package flycheck
-  :hook (prog-mode . flycheck-mode)
-  :config
-  (setq flycheck-check-syntax-automatically '(save idle-change mode-enabled)
-        flycheck-idle-change-delay 0.5
-        flycheck-display-errors-delay 0.3))
+  :preface
+
+  (defun mp-flycheck-eldoc (callback &rest _ignored)
+    "Print flycheck messages at point by calling CALLBACK."
+    (when-let ((flycheck-errors (and flycheck-mode (flycheck-overlay-errors-at (point)))))
+      (mapc
+       (lambda (err)
+         (funcall callback
+           (format "%s: %s"
+                   (let ((level (flycheck-error-level err)))
+                     (pcase level
+                       ('info (propertize "I" 'face 'flycheck-error-list-info))
+                       ('error (propertize "E" 'face 'flycheck-error-list-error))
+                       ('warning (propertize "W" 'face 'flycheck-error-list-warning))
+                       (_ level)))
+                   (flycheck-error-message err))
+           :thing (or (flycheck-error-id err)
+                      (flycheck-error-group err))
+           :face 'font-lock-doc-face))
+       flycheck-errors)))
+
+  (defun mp-flycheck-prefer-eldoc ()
+    (add-hook 'eldoc-documentation-functions #'mp-flycheck-eldoc nil t)
+    (setq eldoc-documentation-strategy 'eldoc-documentation-compose-eagerly)
+    (setq flycheck-display-errors-function nil)
+    (setq flycheck-help-echo-function nil))
+
+  :hook ((flycheck-mode . mp-flycheck-prefer-eldoc)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; File Explorer & Dired
@@ -442,92 +507,69 @@
   :ensure t
   :pin gnu
   :bind (("C-c l" . org-store-link)
-         ("C-c a" . org-agenda)
-         ("C-c c" . org-capture)
-         :map org-mode-map
-         ("C-c <up>" . org-priority-up)
-         ("C-c <down>" . org-priority-down))
+         ("C-c c" . org-capture))
   :hook ((org-mode . org-indent-mode)
-         (org-mode . visual-line-mode))
+         (org-mode . visual-line-mode)
+         (org-mode . variable-pitch-mode))
   :config
-  ;; Agenda files
-  (setq org-agenda-files '("~/org"))
-  (require 'org-tempo)
 
-  ;; Org Babel for code execution
+  (dolist (face '((org-level-1 . 1.5)
+                  (org-level-2 . 1.3)
+                  (org-level-3 . 1.2)
+                  (org-level-4 . 1.1)))
+    (set-face-attribute (car face) nil :weight 'bold :height (cdr face)))
+
+  (set-face-attribute 'org-document-title nil :weight 'bold :height 1.6 :underline nil)
+
+  ;; Code execution
+  (require 'org-tempo)
   (org-babel-do-load-languages
    'org-babel-load-languages
    '((emacs-lisp . t)
-     (C . t)
-     (python . t)))
-  (setq org-babel-python-command "python3")
-  (setq org-confirm-babel-evaluate nil)
+     (C          . t)
+     (python     . t)))
+  (setq org-babel-python-command  "python3"
+        org-confirm-babel-evaluate nil)
 
-  ;; Indentation code inside blocks
-  (setq org-src-tab-acts-natively t
-        org-src-preserve-indentation t
+  ;; Source block indentation
+  (setq org-src-fontify-natively        t   ; syntax-highlight blocks in-buffer
+        org-src-tab-acts-natively       t
+        org-src-preserve-indentation    t
         org-edit-src-content-indentation 0)
 
-  ;; Logging
-  (setq org-log-done 'time
-        org-log-into-drawer t)
-
   ;; Display
-  (setq org-return-follows-link t
-        org-hide-emphasis-markers t
-        org-startup-folded 'content)
+  (setq org-return-follows-link    t
+        org-hide-emphasis-markers  t
+        org-hide-leading-stars     t
+        org-pretty-entities        t
+        org-ellipsis               " ·" ; collapsed heading indicator
+        org-startup-folded         'content)
 
-  ;; TODO keywords
-  (setq org-todo-keywords
-        '((sequence "TODO(t)" "IN-PROGRESS(i)" "WAITING(w)" "|" "DONE(d)" "CANCELLED(c)")))
-
-  ;; Capture templates
   (setq org-capture-templates
-        '(("t" "Todo" entry (file+headline "~/org/tasks.org" "Tasks")
-           "* TODO %?\n  %i\n  %a")
-          ("j" "Journal" entry (file+datetree "~/org/journal.org")
-           "* %?\nEntered on %U\n  %i\n  %a")
-          ("n" "Note" entry (file+headline "~/org/notes.org" "Notes")
+        '(("n" "Note" entry (file "~/org/notes.org")
            "* %?\n  %i\n  %a")))
 
-  ;; Agenda view customization
-  (setq org-agenda-custom-commands
-        '(("d" "Dashboard"
-           ((agenda "" ((org-agenda-span 7)))
-            (todo "IN-PROGRESS" ((org-agenda-overriding-header "In Progress")))
-            (todo "TODO" ((org-agenda-overriding-header "To Do")))))
-          ("n" "Next Actions"
-           ((todo "IN-PROGRESS")
-            (todo "TODO"
-                  ((org-agenda-skip-function
-                    '(org-agenda-skip-entry-if 'scheduled 'deadline))))))))
+  (require 'org-indent)
+  (set-face-attribute 'org-indent          nil :inherit '(org-hide fixed-pitch))
+  (set-face-attribute 'org-block           nil :inherit 'fixed-pitch :height 0.85)
+  (set-face-attribute 'org-code            nil :inherit '(shadow fixed-pitch) :height 0.85)
+  (set-face-attribute 'org-verbatim        nil :inherit '(shadow fixed-pitch) :height 0.85)
+  (set-face-attribute 'org-meta-line       nil :inherit '(font-lock-comment-face fixed-pitch))
+  (set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
+  (set-face-attribute 'org-checkbox        nil :inherit 'fixed-pitch))
 
-  ;; Refile targets
-  (setq org-refile-targets '((org-agenda-files :maxlevel . 3))
-        org-refile-use-outline-path 'file
-        org-outline-path-complete-in-steps nil))
-
-;; Beautiful org headings
-(let* ((variable-tuple '(:font "JetBrainsMono Nerd Font"))
-       (base-font-color (face-foreground 'default nil 'default))
-       (headline `(:inherit default :weight bold :foreground ,base-font-color)))
-  (custom-theme-set-faces
-   'user
-   `(org-level-8 ((t (,@headline ,@variable-tuple))))
-   `(org-level-7 ((t (,@headline ,@variable-tuple))))
-   `(org-level-6 ((t (,@headline ,@variable-tuple))))
-   `(org-level-5 ((t (,@headline ,@variable-tuple))))
-   `(org-level-4 ((t (,@headline ,@variable-tuple :height 1.1))))
-   `(org-level-3 ((t (,@headline ,@variable-tuple :height 1.2))))
-   `(org-level-2 ((t (,@headline ,@variable-tuple :height 1.3))))
-   `(org-level-1 ((t (,@headline ,@variable-tuple :height 1.5))))
-   `(org-document-title ((t (,@headline ,@variable-tuple :height 1.6 :underline nil))))))
-
-;; Org bullets for better visuals
-(use-package org-bullets
-  :hook (org-mode . org-bullets-mode)
+(use-package org-modern
+  :hook (org-mode . org-modern-mode)
   :config
-  (setq org-bullets-bullet-list '("◉" "○" "●" "○" "●" "○" "●")))
+  (setq org-modern-tag      nil   ; don't restyle tags
+        org-modern-priority nil   ; no priority indicators
+        org-modern-todo     nil)) ; no TODO keywords
+
+(use-package olivetti
+  :hook (org-mode . olivetti-mode)
+  :config
+  (setq olivetti-body-width 100)
+  (setq olivetti-style nil)) ; characters wide; adjust to your screen
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; File Backup & Cleanup
@@ -581,16 +623,12 @@
     (princ "External Tool Dependencies\n")
     (dolist (tool '(("verilator"          "Verilog linting/simulation")
                     ("verible-verilog-ls" "Verilog LSP server")
-                    ("gtkwave"            "Waveform viewer")
-                    ("clangd"             "C/C++ LSP server  →  sudo apt install clangd")
-                    ("clang-format"       "C/C++ formatter   →  sudo apt install clang-format")
-                    ("gdb"                "C/C++ debugger    →  sudo apt install gdb")
-                    ("bear"               "compile_commands.json generator  →  sudo apt install bear")
-                    ("cmake"              "CMake build system →  sudo apt install cmake")
-                    ("pyright"            "Python LSP server  →  pip install pyright")
-                    ("python3"            "Python interpreter →  sudo apt install python3")
-                    ("black"              "Python formatter   →  pip install black")
-                    ("debugpy"            "Python debugger    →  pip install debugpy")))
+                    ("clangd"             "C/C++ LSP server")
+                    ("clang-format"       "C/C++ formatter")
+                    ("gdb"                "C/C++ debugger")
+                    ("cmake"              "CMake build system")
+                    ("pyright"            "Python LSP server")
+                    ("python3"            "Python interpreter")))
       (if (executable-find (car tool))
           (princ (format "%s: Found\n" (car tool)))
         (princ (format "%s: NOT FOUND%s\n" (car tool) (cadr tool)))))
@@ -620,18 +658,10 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(org-bullets elisp-refs macrostep diff-hl transient magit which-key corfu verilog-ext cape dired-toggle dired-subtree flycheck yasnippet yasnippet-snippets yasnippet-capf clang-format cmake-mode doom-modeline doom-themes nerd-icons dashboard gud)))
+   '(olivetti org-modern elisp-refs macrostep diff-hl transient magit which-key corfu verilog-ext cape dired-toggle dired-subtree flycheck yasnippet yasnippet-snippets yasnippet-capf clang-format cmake-mode doom-modeline doom-themes nerd-icons dashboard gud centaur-tabs)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(org-document-title ((t (:inherit default :weight bold :foreground "#bbc2cf" :font "JetBrainsMono Nerd Font" :height 1.6 :underline nil))))
- '(org-level-1 ((t (:inherit default :weight bold :foreground "#bbc2cf" :font "JetBrainsMono Nerd Font" :height 1.5))))
- '(org-level-2 ((t (:inherit default :weight bold :foreground "#bbc2cf" :font "JetBrainsMono Nerd Font" :height 1.3))))
- '(org-level-3 ((t (:inherit default :weight bold :foreground "#bbc2cf" :font "JetBrainsMono Nerd Font" :height 1.2))))
- '(org-level-4 ((t (:inherit default :weight bold :foreground "#bbc2cf" :font "JetBrainsMono Nerd Font" :height 1.1))))
- '(org-level-5 ((t (:inherit default :weight bold :foreground "#bbc2cf" :font "JetBrainsMono Nerd Font"))))
- '(org-level-6 ((t (:inherit default :weight bold :foreground "#bbc2cf" :font "JetBrainsMono Nerd Font"))))
- '(org-level-7 ((t (:inherit default :weight bold :foreground "#bbc2cf" :font "JetBrainsMono Nerd Font"))))
- '(org-level-8 ((t (:inherit default :weight bold :foreground "#bbc2cf" :font "JetBrainsMono Nerd Font")))))
+ )
