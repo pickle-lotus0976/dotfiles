@@ -36,7 +36,7 @@
 
 (require 'use-package)
 (setq use-package-always-ensure t
-      use-package-always-defer t  ; Defer by default for performance
+      use-package-always-defer t        ; Defer by default for performance
       use-package-compute-statistics t  ; Track loading times
       use-package-verbose nil)
 
@@ -80,7 +80,6 @@
 (show-paren-mode 1)
 (setq show-paren-delay 0)
 (electric-pair-mode 1)
-;; (setq electric-pair-pairs '( (?\" . ?\") (?\\ { . ?\\ }) (?\\< . ?\\>)))
 
 ;; Auto-revert
 (global-auto-revert-mode 1)
@@ -154,16 +153,7 @@
   (doom-modeline-mode 1))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Snippets (YASnippet)
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(use-package yasnippet
-  :hook (prog-mode . yas-minor-mode)
-  :config
-  (yas-reload-all))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Syntax Checking (Flycheck)
+;;; Syntax Checking using Flycheck
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (use-package flycheck
@@ -174,7 +164,7 @@
         flycheck-display-errors-delay 0.3))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Language Server Protocol (LSP)
+;;; LSP (only for Verilog)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (use-package lsp-mode
@@ -223,7 +213,7 @@
         lsp-ui-doc-delay 0.5))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Verilog
+;;; Verilog mode configuration
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (use-package verilog-mode
@@ -265,7 +255,6 @@
     (interactive)
     (compile (format "verilator --lint-only -Wall %s" (buffer-file-name))))
 
-;;
 (defun verilog-verilator-compile ()
   "Compile current Verilog module with Verilator."
   (interactive)
@@ -333,32 +322,75 @@
          ("\\.cmake\\'" . cmake-mode)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Python Configuration
+;;; Eglot and Corfu configuration
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (use-package eglot
-  :ensure nil  ; built-in since Emacs 29
-  :hook ((c-mode     . eglot-ensure)
-         (c++-mode   . eglot-ensure)
+  :ensure nil
+  :hook ((c-mode      . eglot-ensure)
+         (c++-mode    . eglot-ensure)
          (python-mode . eglot-ensure))
-  :config
-  (setq eglot-autoshutdown t
-        eglot-ignored-server-capabilities '(:documentHighlightProvider)))
+  :custom
+  (eglot-autoshutdown t)
+  (eglot-sync-connect 1)
+  (eglot-ignored-server-capabilities '(:documentHighlightProvider)))
 
 (use-package corfu
-  :hook (prog-mode . corfu-mode)
-  :config
+  :ensure t
+  :demand t
+  :init
   (setq corfu-auto t
-        corfu-auto-delay 0.2
+        corfu-auto-delay 0.1
         corfu-auto-prefix 2
-        corfu-cycle t))
+        corfu-cycle t
+        corfu-quit-no-match t)
+  :config
+  (global-corfu-mode))
+
+(use-package cape
+  :ensure t
+  :demand t
+  :bind ("C-c p" . cape-prefix-map)
+  :config
+  (add-hook 'completion-at-point-functions #'cape-dabbrev)
+  (add-hook 'completion-at-point-functions #'cape-file))
+
+(use-package yasnippet
+  :ensure t
+  :config
+  (yas-global-mode 1))
+
+(use-package yasnippet-snippets
+  :ensure t
+  :after yasnippet
+  :config
+  (yas-reload-all))
+
+(use-package yasnippet-capf
+  :ensure t
+  :after (yasnippet cape))
+
+;; Merge all LSP-buffer sources into one simultaneous query
+(defun my/eglot-capf-setup ()
+  (setq-local completion-at-point-functions
+              (list
+               (cape-capf-super
+                #'eglot-completion-at-point
+                #'yasnippet-capf
+                #'cape-dabbrev
+                #'cape-file))))
+
+(with-eval-after-load 'eglot
+  (add-hook 'eglot-managed-mode-hook #'my/eglot-capf-setup))
 
 (use-package gud
   :ensure nil
-  :bind (("<f5>" . gdb)
-         ("<f9>" . gud-break)
-         ("<f10>" . gud-next)
-         ("<f11>" . gud-step)
+  :bind (("<f5>"    . gdb)
+         ("<f9>"    . gud-break)
+         ("<f10>"   . gud-next)
+         ("<f11>"   . gud-step)
          ("<S-f11>" . gud-finish)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Emacs Lisp Configuration
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -389,30 +421,40 @@
 ;;; File Explorer & Dired
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(use-package neotree
-  :bind ("<f8>" . neotree-toggle)
+;; dired-subtree — expand subdirectories inline with TAB / S-TAB
+(use-package dired-subtree
+  :after dired
+  :bind (:map dired-mode-map
+         ("<tab>"     . dired-subtree-toggle)
+         ("<backtab>" . dired-subtree-cycle))
   :config
-  (setq neo-show-hidden-files t
-        neo-smart-open t
-        neo-theme (if (display-graphic-p) 'icons 'arrow)
-        neo-autorefresh t
-        neo-window-width 30
-        neo-window-fixed-size nil))
+  (setq dired-subtree-use-backgrounds nil)) ; cleaner look in a narrow sidebar
 
-(require 'dired-x)
-(setq dired-listing-switches "-alh"
-      dired-dwim-target t)
-(add-hook 'dired-mode-hook 'dired-hide-details-mode)
+(use-package dired-toggle
+  :defer t
+  :bind (("<f3>" . #'dired-toggle)
+         :map dired-mode-map
+         ("q" . #'dired-toggle-quit)
+         ([remap dired-find-file] . #'dired-toggle-find-file)
+         ([remap dired-up-directory] . #'dired-toggle-up-directory)
+         ("C-c C-u" . #'dired-toggle-up-directory))
+  :config
+  (setq dired-toggle-window-size 32)
+  (setq dired-toggle-window-side 'left)
 
-(use-package all-the-icons-dired
-  :hook (dired-mode . all-the-icons-dired-mode))
+  ;; Optional, enable =visual-line-mode= for our narrow dired buffer:
+  (add-hook 'dired-toggle-mode-hook
+            (lambda () (interactive)
+              (visual-line-mode 1)
+              (setq-local visual-line-fringe-indicators '(nil right-curly-arrow))
+              (setq-local word-wrap nil))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Project Management - Projectile
+;;; Project Management
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (use-package project
   :ensure nil
-  :bind-keymap ("C-c p" . project-prefix-map))
+  :bind-keymap ("C-c P" . project-prefix-map))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Which-Key
@@ -566,7 +608,7 @@
 (let ((eln-dir (list (expand-file-name "eln-cache" user-emacs-directory))))
   (if (boundp 'native-comp-eln-load-path)
       (setq native-comp-eln-load-path eln-dir)   ; Emacs 29
-    (setq comp-eln-load-path eln-dir)))          ; Emacs 30+
+    (setq comp-eln-load-path eln-dir)))          ; Emacs 30 (in case Emacs is updated)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Restore Performance After Startup
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -638,4 +680,18 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(org-bullets elisp-refs macrostep diff-hl transient magit which-key corfu all-the-icons-dired neotree lsp-ui lsp-mode flycheck yasnippet clang-format cmake-mode doom-modeline catppuccin-theme all-the-icons dashboard)))
+   '(org-bullets elisp-refs macrostep diff-hl transient magit which-key corfu cape dired-toggle dired-subtree lsp-ui lsp-mode flycheck yasnippet yasnippet-snippets yasnippet-capf clang-format cmake-mode doom-modeline catppuccin-theme all-the-icons dashboard)))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(org-document-title ((t (:inherit default :weight bold :foreground "#cdd6f4" :font "JetBrainsMono Nerd Font" :height 1.6 :underline nil))))
+ '(org-level-1 ((t (:inherit default :weight bold :foreground "#cdd6f4" :font "JetBrainsMono Nerd Font" :height 1.5))))
+ '(org-level-2 ((t (:inherit default :weight bold :foreground "#cdd6f4" :font "JetBrainsMono Nerd Font" :height 1.3))))
+ '(org-level-3 ((t (:inherit default :weight bold :foreground "#cdd6f4" :font "JetBrainsMono Nerd Font" :height 1.2))))
+ '(org-level-4 ((t (:inherit default :weight bold :foreground "#cdd6f4" :font "JetBrainsMono Nerd Font" :height 1.1))))
+ '(org-level-5 ((t (:inherit default :weight bold :foreground "#cdd6f4" :font "JetBrainsMono Nerd Font"))))
+ '(org-level-6 ((t (:inherit default :weight bold :foreground "#cdd6f4" :font "JetBrainsMono Nerd Font"))))
+ '(org-level-7 ((t (:inherit default :weight bold :foreground "#cdd6f4" :font "JetBrainsMono Nerd Font"))))
+ '(org-level-8 ((t (:inherit default :weight bold :foreground "#cdd6f4" :font "JetBrainsMono Nerd Font")))))
