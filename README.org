@@ -1,0 +1,21 @@
+* DOTFILES
+This repository contains all the configuration files the most important software that use on a daily basis.
+
+** Contents
+*** bashrc
+This contains the the my configuration for the Bash shell. It is mainly for my convinience, so that I do not have to start from scratch when I migrate to a new machine.
+
+*** init.el & early-init.el
+This is the most important part of the repository. This contains all my Emacs configurations and settings.
+
+*** kitty.conf
+This contains the settings for Kitty terminal emulator. Once again, this is just for my own convinience.
+
+*** zathurac
+This contains custom keybindings and the color theme that I configured for Zathura PDF reader.
+
+** Prerequisites
+1. GNU Bash
+2. GNU Emacs
+3. Zathura
+4. Kitty Terminal Emulator
