@@ -90,6 +90,18 @@
 (setq-default cursor-type 'bar)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Environment Variables
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(use-package exec-path-from-shell
+  :ensure t
+  :demand t
+  :config
+  ;; Pull PATH and MANPATH from the user's shell when starting Emacs via GUI
+  (when (memq window-system '(mac ns x pgtk))
+    (exec-path-from-shell-initialize)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Font Configuration
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -184,18 +196,40 @@
         doom-modeline-buffer-file-name-style 'truncate-upto-project))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Tree-sitter (High-Performance Syntax Highlighting)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(use-package treesit-auto
+  :ensure t
+  :demand t
+  :custom
+  (treesit-auto-install 'prompt)
+  :config
+  ;; FORCE Emacs to use ABI-14 compatible grammar versions for C/C++
+  (setq treesit-language-source-alist
+        '((c "https://github.com/tree-sitter/tree-sitter-c" "v0.20.8")
+          (cpp "https://github.com/tree-sitter/tree-sitter-cpp" "v0.20.5")))
+
+  (treesit-auto-add-to-auto-mode-alist 'all)
+  (global-treesit-auto-mode))
+
+(setq treesit-font-lock-level 4)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Eldoc Configuration
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(use-package eldoc
-  :preface
-   (add-to-list 'display-buffer-alist
-               '("^\\*eldoc for" display-buffer-at-bottom
-                 (window-height . 4)))
-   (setq eldoc-documentation-strategy 'eldoc-documentation-compose-eagerly)
-  :config
-   (eldoc-add-command-completions "paredit-")
-   (eldoc-add-command-completions "combobulate-"))
+(use-package eldoc-box
+  :ensure t
+  ;; Only load and enable when Eglot connects to a language server
+  :hook (eglot-managed-mode . eldoc-box-hover-at-point-mode)
+  :bind (:map eglot-mode-map
+              ;; Optional: Bind a key to manually summon the box if you want to dismiss it
+              ("C-h ." . eldoc-box-help-at-point))
+  :custom
+  ;; Keep the box from getting too massive on large docstrings
+  (eldoc-box-max-pixel-width 600)
+  (eldoc-box-max-pixel-height 400)
+  (eldoc-box-clear-with-C-g t)) ; easily dismiss it with standard cancel
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Syntax Checking using Flycheck
@@ -313,10 +347,11 @@
 
 (use-package eglot
   :ensure nil
-  :hook ((c-mode      . eglot-ensure)
-         (c++-mode    . eglot-ensure)
-         (python-mode . eglot-ensure)
-         (verilog-mode . eglot-ensure))
+  :hook ((c-ts-mode       . eglot-ensure)
+         (c++-ts-mode     . eglot-ensure)
+         (python-ts-mode  . eglot-ensure)
+         (verilog-mode    . eglot-ensure)
+         (bash-ts-mode    . eglot-ensure))
   :custom
   (eglot-autoshutdown t)
   (eglot-sync-connect 1)
@@ -426,6 +461,16 @@
 (use-package macrostep
   :bind (:map emacs-lisp-mode-map
               ("C-c e" . macrostep-expand)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Shell Scripting Configuration
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(use-package sh-script
+  :ensure nil
+  :config
+  (setq sh-basic-offset 2
+        sh-indentation 2))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Verilog / SystemVerilog
@@ -658,7 +703,7 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(olivetti org-modern elisp-refs macrostep diff-hl transient magit which-key corfu verilog-ext cape dired-toggle dired-subtree flycheck yasnippet yasnippet-snippets yasnippet-capf clang-format cmake-mode doom-modeline doom-themes nerd-icons dashboard gud centaur-tabs)))
+   '(olivetti org-modern elisp-refs macrostep diff-hl transient magit which-key corfu verilog-ext cape dired-toggle dired-subtree flycheck yasnippet yasnippet-snippets yasnippet-capf clang-format cmake-mode doom-modeline doom-themes nerd-icons dashboard gud centaur-tabs exec-path-from-shell eldoc-box treesit-auto)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.

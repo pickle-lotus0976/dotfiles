@@ -90,6 +90,18 @@
 (setq-default cursor-type 'bar)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Environment Variables
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(use-package exec-path-from-shell
+  :ensure t
+  :demand t
+  :config
+  ;; Pull PATH and MANPATH from the user's shell when starting Emacs via GUI
+  (when (memq window-system '(mac ns x pgtk))
+    (exec-path-from-shell-initialize)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Font Configuration
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -102,11 +114,17 @@
                       :height 140
                       :weight 'regular)
 
-  ;; Fixed-pitch
+  ;; Fixed Pitch
   (set-face-attribute 'fixed-pitch nil
                       :font "CaskaydiaCove Nerd Font"
                       :height 140
                       :weight 'regular)
+
+  ;; Varible Pitch
+  (set-face-attribute 'variable-pitch nil
+                    :font "CaskaydiaCove Nerd Font"
+                    :height 140
+                    :weight 'regular)
 
   ;; Bold
   (set-face-attribute 'bold nil
@@ -307,10 +325,11 @@
 
 (use-package eglot
   :ensure nil
-  :hook ((c-mode      . eglot-ensure)
-         (c++-mode    . eglot-ensure)
-         (python-mode . eglot-ensure)
-         (verilog-mode . eglot-ensure))
+  :hook ((c-mode       . eglot-ensure)
+         (c++-mode     . eglot-ensure)
+         (python-mode  . eglot-ensure)
+         (verilog-mode . eglot-ensure)
+         (sh-mode      . eglot-ensure))
   :custom
   (eglot-autoshutdown t)
   (eglot-sync-connect 1)
@@ -422,6 +441,16 @@
               ("C-c e" . macrostep-expand)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Shell Scripting Configuration
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(use-package sh-script
+  :ensure nil
+  :config
+  (setq sh-basic-offset 2
+        sh-indentation 2))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Verilog / SystemVerilog
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -501,92 +530,69 @@
   :ensure t
   :pin gnu
   :bind (("C-c l" . org-store-link)
-         ("C-c a" . org-agenda)
-         ("C-c c" . org-capture)
-         :map org-mode-map
-         ("C-c <up>" . org-priority-up)
-         ("C-c <down>" . org-priority-down))
+         ("C-c c" . org-capture))
   :hook ((org-mode . org-indent-mode)
-         (org-mode . visual-line-mode))
+         (org-mode . visual-line-mode)
+         (org-mode . variable-pitch-mode))
   :config
-  ;; Agenda files
-  (setq org-agenda-files '("~/org"))
-  (require 'org-tempo)
 
-  ;; Org Babel for code execution
+  (dolist (face '((org-level-1 . 1.5)
+                  (org-level-2 . 1.3)
+                  (org-level-3 . 1.2)
+                  (org-level-4 . 1.1)))
+    (set-face-attribute (car face) nil :weight 'bold :height (cdr face)))
+
+  (set-face-attribute 'org-document-title nil :weight 'bold :height 1.6 :underline nil)
+
+  ;; Code execution
+  (require 'org-tempo)
   (org-babel-do-load-languages
    'org-babel-load-languages
    '((emacs-lisp . t)
-     (C . t)
-     (python . t)))
-  (setq org-babel-python-command "python3")
-  (setq org-confirm-babel-evaluate nil)
+     (C          . t)
+     (python     . t)))
+  (setq org-babel-python-command  "python3"
+        org-confirm-babel-evaluate nil)
 
-  ;; Indentation code inside blocks
-  (setq org-src-tab-acts-natively t
-        org-src-preserve-indentation t
+  ;; Source block indentation
+  (setq org-src-fontify-natively        t   ; syntax-highlight blocks in-buffer
+        org-src-tab-acts-natively       t
+        org-src-preserve-indentation    t
         org-edit-src-content-indentation 0)
 
-  ;; Logging
-  (setq org-log-done 'time
-        org-log-into-drawer t)
-
   ;; Display
-  (setq org-return-follows-link t
-        org-hide-emphasis-markers t
-        org-startup-folded 'content)
+  (setq org-return-follows-link    t
+        org-hide-emphasis-markers  t
+        org-hide-leading-stars     t
+        org-pretty-entities        t
+        org-ellipsis               " ·" ; collapsed heading indicator
+        org-startup-folded         'content)
 
-  ;; TODO keywords
-  (setq org-todo-keywords
-        '((sequence "TODO(t)" "IN-PROGRESS(i)" "WAITING(w)" "|" "DONE(d)" "CANCELLED(c)")))
-
-  ;; Capture templates
   (setq org-capture-templates
-        '(("t" "Todo" entry (file+headline "~/org/tasks.org" "Tasks")
-           "* TODO %?\n  %i\n  %a")
-          ("j" "Journal" entry (file+datetree "~/org/journal.org")
-           "* %?\nEntered on %U\n  %i\n  %a")
-          ("n" "Note" entry (file+headline "~/org/notes.org" "Notes")
+        '(("n" "Note" entry (file "~/org/notes.org")
            "* %?\n  %i\n  %a")))
 
-  ;; Agenda view customization
-  (setq org-agenda-custom-commands
-        '(("d" "Dashboard"
-           ((agenda "" ((org-agenda-span 7)))
-            (todo "IN-PROGRESS" ((org-agenda-overriding-header "In Progress")))
-            (todo "TODO" ((org-agenda-overriding-header "To Do")))))
-          ("n" "Next Actions"
-           ((todo "IN-PROGRESS")
-            (todo "TODO"
-                  ((org-agenda-skip-function
-                    '(org-agenda-skip-entry-if 'scheduled 'deadline))))))))
+  (require 'org-indent)
+  (set-face-attribute 'org-indent          nil :inherit '(org-hide fixed-pitch))
+  (set-face-attribute 'org-block           nil :inherit 'fixed-pitch :height 0.85)
+  (set-face-attribute 'org-code            nil :inherit '(shadow fixed-pitch) :height 0.85)
+  (set-face-attribute 'org-verbatim        nil :inherit '(shadow fixed-pitch) :height 0.85)
+  (set-face-attribute 'org-meta-line       nil :inherit '(font-lock-comment-face fixed-pitch))
+  (set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
+  (set-face-attribute 'org-checkbox        nil :inherit 'fixed-pitch))
 
-  ;; Refile targets
-  (setq org-refile-targets '((org-agenda-files :maxlevel . 3))
-        org-refile-use-outline-path 'file
-        org-outline-path-complete-in-steps nil))
-
-;; Beautiful org headings
-(let* ((variable-tuple '(:font "CaskaydiaCove Nerd Font"))
-       (base-font-color (face-foreground 'default nil 'default))
-       (headline `(:inherit default :weight bold :foreground ,base-font-color)))
-  (custom-theme-set-faces
-   'user
-   `(org-level-8 ((t (,@headline ,@variable-tuple))))
-   `(org-level-7 ((t (,@headline ,@variable-tuple))))
-   `(org-level-6 ((t (,@headline ,@variable-tuple))))
-   `(org-level-5 ((t (,@headline ,@variable-tuple))))
-   `(org-level-4 ((t (,@headline ,@variable-tuple :height 1.1))))
-   `(org-level-3 ((t (,@headline ,@variable-tuple :height 1.2))))
-   `(org-level-2 ((t (,@headline ,@variable-tuple :height 1.3))))
-   `(org-level-1 ((t (,@headline ,@variable-tuple :height 1.5))))
-   `(org-document-title ((t (,@headline ,@variable-tuple :height 1.6 :underline nil))))))
-
-;; Org bullets for better visuals
-(use-package org-bullets
-  :hook (org-mode . org-bullets-mode)
+(use-package org-modern
+  :hook (org-mode . org-modern-mode)
   :config
-  (setq org-bullets-bullet-list '("◉" "○" "●" "○" "●" "○" "●")))
+  (setq org-modern-tag      nil   ; don't restyle tags
+        org-modern-priority nil   ; no priority indicators
+        org-modern-todo     nil)) ; no TODO keywords
+
+(use-package olivetti
+  :hook (org-mode . olivetti-mode)
+  :config
+  (setq olivetti-body-width 100)
+  (setq olivetti-style nil)) ; characters wide; adjust to your screen
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; File Backup & Cleanup
@@ -640,16 +646,12 @@
     (princ "External Tool Dependencies\n")
     (dolist (tool '(("verilator"          "Verilog linting/simulation")
                     ("verible-verilog-ls" "Verilog LSP server")
-                    ("gtkwave"            "Waveform viewer")
-                    ("clangd"             "C/C++ LSP server  →  sudo apt install clangd")
-                    ("clang-format"       "C/C++ formatter   →  sudo apt install clang-format")
-                    ("gdb"                "C/C++ debugger    →  sudo apt install gdb")
-                    ("bear"               "compile_commands.json generator  →  sudo apt install bear")
-                    ("cmake"              "CMake build system →  sudo apt install cmake")
-                    ("pyright"            "Python LSP server  →  pip install pyright")
-                    ("python3"            "Python interpreter →  sudo apt install python3")
-                    ("black"              "Python formatter   →  pip install black")
-                    ("debugpy"            "Python debugger    →  pip install debugpy")))
+                    ("clangd"             "C/C++ LSP server")
+                    ("clang-format"       "C/C++ formatter")
+                    ("gdb"                "C/C++ debugger")
+                    ("cmake"              "CMake build system")
+                    ("pyright"            "Python LSP server")
+                    ("python3"            "Python interpreter")))
       (if (executable-find (car tool))
           (princ (format "%s: Found\n" (car tool)))
         (princ (format "%s: NOT FOUND%s\n" (car tool) (cadr tool)))))
@@ -679,4 +681,10 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(org-bullets elisp-refs macrostep diff-hl transient magit which-key corfu verilog-ext cape dired-toggle dired-subtree flycheck yasnippet yasnippet-snippets yasnippet-capf clang-format cmake-mode doom-modeline doom-themes nerd-icons dashboard gud centaur-tabs)))
+   '(olivetti org-modern elisp-refs macrostep diff-hl transient magit which-key corfu verilog-ext cape dired-toggle dired-subtree flycheck yasnippet yasnippet-snippets yasnippet-capf clang-format cmake-mode doom-modeline doom-themes nerd-icons dashboard gud centaur-tabs exec-path-from-shell)))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )

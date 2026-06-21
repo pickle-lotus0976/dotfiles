@@ -1,5 +1,5 @@
 * DOTFILES
-This repository contains all the configuration files the most important software that use on a daily basis.
+This repository contains all the configuration files for all the tools that I use on a daily basis.
 
 ** Contents
 *** bashrc
@@ -16,6 +16,6 @@ This contains custom keybindings and the color theme that I configured for Zathu
 
 ** Prerequisites
 1. GNU Bash
-2. GNU Emacs
+2. GNU Emacs(29+)
 3. Zathura
 4. Kitty Terminal Emulator
